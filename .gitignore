@@ -1,1 +1,14 @@
+# 機密：MCP token 等
 .env
+
+# 從 Penpot 匯出的圖檔（可重新產生，約 150MB）
+exports/
+
+# 遷移腳本的執行紀錄與暫存結果
+*.log
+migration/.results/
+
+# 工具產物
+node_modules/
+__pycache__/
+*.pyc
