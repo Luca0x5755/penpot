@@ -85,7 +85,7 @@ services:
   #     - "443:443"
 
   penpot-frontend:
-    image: "penpotapp/frontend:${PENPOT_VERSION:-2.18}"
+    image: "penpotapp/frontend:${PENPOT_VERSION:-2.19.1}"
     restart: always
     ports:
       - 9001:8080
@@ -96,6 +96,7 @@ services:
     depends_on:
       - penpot-backend
       - penpot-mcp
+      - penpot-admin-console
       - penpot-exporter
 
     networks:
@@ -115,11 +116,15 @@ services:
     environment:
       << : [*penpot-flags, *penpot-http-body-size, *penpot-public-uri]
 
+      # Don't touch it; this uses an internal docker network to
+      # communicate with the admin-console.
+      PENPOT_ADMIN_CONSOLE_URI: http://penpot-admin-console:3000
+
       # Set to "true" on hosts where IPv6 is disabled at kernel boot level.
       # PENPOT_DISABLE_IPV6_LISTEN: "true"
 
   penpot-backend:
-    image: "penpotapp/backend:${PENPOT_VERSION:-2.18}"
+    image: "penpotapp/backend:${PENPOT_VERSION:-2.19.1}"
     restart: always
 
     volumes:
@@ -139,6 +144,10 @@ services:
 
     environment:
       << : [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key, *penpot-database]
+
+      # Don't touch it; this uses an internal docker network to
+      # communicate with the admin-console.
+      PENPOT_ADMIN_CONSOLE_URI: http://penpot-admin-console:3000
 
       ## Valkey (or previously redis) is used for the websockets notifications. Don't touch
       ## unless the valkey container has different parameters or different name.
@@ -164,14 +173,32 @@ services:
       PENPOT_TELEMETRY_REFERER: compose
 
 
+  penpot-admin-console:
+    image: "penpotapp/admin-console:${PENPOT_VERSION:-2.19.1}"
+    restart: always
+
+    depends_on:
+      penpot-postgres:
+        condition: service_healthy
+
+    networks:
+      - penpot
+
+    environment:
+      << : [*penpot-public-uri, *penpot-secret-key, *penpot-database]
+
+      # Don't touch it; this uses an internal docker network to
+      # communicate with the frontend.
+      PENPOT_INTERNAL_URI: http://penpot-frontend:8080
+
   penpot-mcp:
-    image: "penpotapp/mcp:${PENPOT_VERSION:-2.18}"
+    image: "penpotapp/mcp:${PENPOT_VERSION:-2.19.1}"
     restart: always
     networks:
       - penpot
 
   penpot-exporter:
-    image: "penpotapp/exporter:${PENPOT_VERSION:-2.18}"
+    image: "penpotapp/exporter:${PENPOT_VERSION:-2.19.1}"
     restart: always
 
     depends_on:
@@ -202,7 +229,7 @@ services:
       # PENPOT_WASM_WORKER_IMAGE_CACHE_SIZE: 134217728
 
   penpot-postgres:
-    image: "postgres:15"
+    image: "postgres:15.20"
     restart: always
     stop_signal: SIGINT
 
@@ -226,7 +253,7 @@ services:
       - POSTGRES_PASSWORD=penpot
 
   penpot-valkey:
-    image: valkey/valkey:8.1
+    image: valkey/valkey:8.1.11
     restart: always
 
     healthcheck:
